@@ -1,0 +1,207 @@
+1. Understanding the MVC Architecture
+Model
+
+    Represents the application’s data (e.g., Employee entity).
+    Maps directly to the database table using JPA and Hibernate.
+    Uses annotations like @Entity, @Id, and @Column to define the structure.
+
+View
+
+    Not relevant here as this is a backend-only REST API. In a full-stack application, the frontend (React, Angular, etc.) serves as the view.
+
+Controller
+
+    Manages the HTTP requests (REST endpoints) and communicates with the Service Layer.
+    Annotated with @RestController and @RequestMapping.
+
+Service
+
+    Contains business logic and calls the Repository to fetch or save data.
+    Annotated with @Service.
+
+Repository
+
+    Handles database interactions using Spring Data JPA.
+    Annotated with @Repository.
+
+2. Step-by-Step Flow
+Step 1: HTTP Request Handling (Controller Layer)
+
+    HTTP requests are sent by the client (Postman, frontend, etc.).
+        Example: A POST request to /employees with JSON payload to create an employee.
+    The EmployeeController receives the request via methods annotated with @PostMapping, @GetMapping, etc.
+    The request payload is mapped to the Employee object using @RequestBody.
+
+Controller Example
+
+@RestController
+@RequestMapping("/employees")
+public class EmployeeController {
+    private final EmployeeService employeeService;
+
+    @Autowired
+    public EmployeeController(EmployeeService employeeService) {
+        this.employeeService = employeeService;
+    }
+
+    @PostMapping
+    public ResponseEntity<Employee> createEmployee(@RequestBody Employee employee) {
+        Employee savedEmployee = employeeService.save(employee); // Calls Service Layer
+        return new ResponseEntity<>(savedEmployee, HttpStatus.CREATED);
+    }
+}
+
+Step 2: Business Logic (Service Layer)
+
+    The Controller calls the Service layer method, passing the request data (Employee object).
+    The Service layer contains the core business logic.
+        Example: Calculating salary hikes, validating input, handling exceptions.
+    It interacts with the Repository to perform database operations like save, update, or delete.
+
+Service Example
+
+@Service
+public class EmployeeService {
+    private final EmployeeRepository employeeRepository;
+
+    @Autowired
+    public EmployeeService(EmployeeRepository employeeRepository) {
+        this.employeeRepository = employeeRepository;
+    }
+
+    public Employee save(Employee employee) {
+        return employeeRepository.save(employee); // Saves Employee to DB
+    }
+
+    public void delete(Long id) {
+        employeeRepository.deleteById(id); // Deletes Employee by ID
+    }
+
+    public Employee applyHike(Long id, Double percentage) {
+        Employee employee = employeeRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
+        employee.setSalary(employee.getSalary() * (1 + percentage / 100)); // Hike Logic
+        return employeeRepository.save(employee); // Save Updated Employee
+    }
+}
+
+Step 3: Database Interaction (Repository Layer)
+
+    The Repository layer interacts with the database.
+    Spring Data JPA abstracts SQL queries. Methods like save, findById, and deleteById are available without additional coding.
+    Custom queries can be added using @Query or method naming conventions.
+
+Repository Example
+
+@Repository
+public interface EmployeeRepository extends JpaRepository<Employee, Long> {
+    // JpaRepository provides built-in methods like save, findById, deleteById
+}
+
+Step 4: Data Storage (Model Layer)
+
+    The Employee class represents the database structure and business model.
+    It is mapped to a MySQL table using JPA annotations like @Entity, @Table, etc.
+
+Model Example
+
+@Entity
+@Table(name = "employees")
+public class Employee {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, unique = true)
+    private String email;
+
+    @Column(nullable = false)
+    private String role;
+
+    @Column(nullable = false)
+    private Double salary;
+
+    @Embedded
+    private Address address; // Composite Object
+
+    // Getters, Setters, and Constructors
+}
+
+3. Exception Handling
+
+Handled using a global exception handler with @ControllerAdvice. This ensures that all exceptions are processed consistently.
+Example
+
+@ControllerAdvice
+public class GlobalExceptionHandler {
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<String> handleResourceNotFound(ResourceNotFoundException ex) {
+        return new ResponseEntity<>(ex.getMessage(), HttpStatus.NOT_FOUND);
+    }
+}
+
+4. Logging
+
+Logging tracks changes and actions in the application:
+
+    Using AOP (LoggingAspect), logs are added before and after methods like save, delete, and applyHike.
+    This ensures detailed tracking without polluting the core business logic.
+
+Aspect Example
+
+@Aspect
+@Component
+public class LoggingAspect {
+    private static final Logger logger = LoggerFactory.getLogger(LoggingAspect.class);
+
+    @Before("execution(* com.example.employee_management.service.EmployeeService.save(..))")
+    public void logBeforeSave(Object employee) {
+        logger.info("Preparing to save employee: {}", employee);
+    }
+
+    @AfterReturning(pointcut = "execution(* com.example.employee_management.service.EmployeeService.save(..))", returning = "result")
+    public void logAfterSave(Object result) {
+        logger.info("Employee saved successfully: {}", result);
+    }
+}
+
+5. Flow Overview
+
+    Client sends an HTTP request to the controller (e.g., POST /employees).
+    The controller maps the request payload to an object and calls the service.
+    The service processes the request, applies business logic, and interacts with the repository.
+    The repository performs CRUD operations on the database.
+    Response is returned to the client with the result.
+
+6. Important Annotations and Interview Relevance
+Spring Core
+
+    @Autowired: Dependency injection for services or repositories.
+    @Component: Indicates a Spring Bean.
+    @Service: Specialized @Component for the service layer.
+    @Repository: Specialized @Component for the repository layer.
+
+Spring Boot
+
+    @SpringBootApplication: Combines @Configuration, @EnableAutoConfiguration, and @ComponentScan.
+
+Spring MVC
+
+    @RestController: Combines @Controller and @ResponseBody to return JSON responses.
+    @RequestMapping: Base path for controller methods.
+    @GetMapping, @PostMapping, @DeleteMapping, @PutMapping: Handle HTTP methods.
+    @RequestBody: Maps JSON payload to an object.
+    @PathVariable: Maps URL path variables.
+    @RequestParam: Maps query parameters.
+
+Spring Data JPA
+
+    @Entity: Defines a JPA entity.
+    @Table: Maps a class to a database table.
+    @Id, @GeneratedValue: Define primary key and auto-generation strategy.
+    @Embedded: Used for composite objects.
+
+Spring AOP
+
+    @Aspect: Indicates an Aspect class.
+    @Before, @AfterReturning: Define advice for methods.

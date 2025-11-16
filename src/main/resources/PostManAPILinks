@@ -1,0 +1,21 @@
+Operation	HTTP Method	URL	Notes
+Create Employee	    POST	http://localhost:8080/api/employees	                                        Pass employee details in JSON body.
+Get All Employees	GET	    http://localhost:8080/api/employees	                                        Fetches all employees.
+Get Employee by ID	GET  	http://localhost:8080/api/employees/{id}                                    Replace {id} with employee ID.
+Update Employee	    PUT	    http://localhost:8080/api/employees/{id}	                                Update details in JSON body.
+Delete Employee	    DELETE	http://localhost:8080/api/employees/{id}                                    Replace {id} with employee ID.
+Add Salary Hike	    PUT	    http://localhost:8080/api/employees/{id}/hike?hikePercentage={percentage}	Add hike percentage in the query.
+
+
+JSON Raw data insertion - 
+{
+    "email": "bobby@example.com",
+    "role": "Student",
+    "salary": 400000,
+    "address": {
+        "street": "123 Elm St",
+        "city": "Some City",
+        "state": "Some State",
+        "postalCode": "123456"
+    }
+}

@@ -1,0 +1,27 @@
+# Maven
+/target/
+
+# IntelliJ
+.idea/
+/*.iml
+
+# Eclipse
+.classpath
+.project
+.settings/
+
+# VS Code
+.vscode/
+
+# Logs
+logs/
+*.log
+
+# Environment files
+.env
+
+# Databases
+*.db
+
+# Spring Boot Config
+src/main/resources/application-*.properties
