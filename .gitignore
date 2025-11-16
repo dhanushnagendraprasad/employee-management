@@ -1,27 +1,24 @@
-# Maven
-/target/
-
-# IntelliJ
+target/
+logs/
+*.log
+*.db
+*.keystore
+*.iml
+.vscode/
 .idea/
-/*.iml
-
-# Eclipse
 .classpath
 .project
 .settings/
+*.jar
+*.war
+*.class
 
-# VS Code
-.vscode/
+# OS garbage
+.DS_Store
+Thumbs.db
 
-# Logs
-logs/
-*.log
-
-# Environment files
+# Env
 .env
 
-# Databases
-*.db
-
-# Spring Boot Config
-src/main/resources/application-*.properties
+# Spring Boot specific
+/src/main/resources/application-*.properties
