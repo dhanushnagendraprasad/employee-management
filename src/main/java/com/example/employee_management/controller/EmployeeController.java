@@ -1,9 +1,10 @@
 package com.example.employee_management.controller;
 
 import com.example.employee_management.dto.EmployeeDTO;
-import com.example.employee_management.model.Employee;
+import com.example.employee_management.model.AppUser;
 import com.example.employee_management.service.EmployeeService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,87 +19,56 @@ public class EmployeeController {
         this.service = service;
     }
 
-    // Create an employee
+    // Create - Only ADMIN can create new employees via this portal
     @PostMapping
-    public ResponseEntity<Employee> createEmployee(@RequestBody EmployeeDTO dto) {
-        Employee created = service.createEmployee(dto);
-        return ResponseEntity.status(201).body(created);
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<AppUser> createEmployee(@RequestBody EmployeeDTO dto) {
+        return ResponseEntity.status(201).body(service.createEmployee(dto));
     }
 
-    // Get all employees
+    // Get All - ADMIN or MANAGER
     @GetMapping
-    public ResponseEntity<List<Employee>> getAllEmployees() {
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ResponseEntity<List<AppUser>> getAllEmployees() {
         return ResponseEntity.ok(service.getAllEmployees());
     }
 
-    // Get by numeric id only (prevents conflicts with other path segments)
-    @GetMapping("/{id:\\d+}")
-    public ResponseEntity<Employee> getEmployeeById(@PathVariable Long id) {
-        Employee e = service.getEmployeeById(id);
+    // Get By ID - Open to Authenticated Users (You can refine this later)
+    @GetMapping("/{id}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<AppUser> getEmployeeById(@PathVariable Long id) {
+        AppUser e = service.getEmployeeById(id);
         if (e == null) return ResponseEntity.notFound().build();
         return ResponseEntity.ok(e);
     }
 
-    // Update entire employee (by numeric id)
-    @PutMapping("/{id:\\d+}")
-    public ResponseEntity<Employee> updateEmployee(
-            @PathVariable Long id,
-            @RequestBody Employee updatedEmployee) {
-
-        Employee existing = service.getEmployeeById(id);
-        if (existing == null) {
-            return ResponseEntity.notFound().build();
-        }
-
-        existing.setEmail(updatedEmployee.getEmail());
-        existing.setRole(updatedEmployee.getRole());
-        existing.setSalary(updatedEmployee.getSalary());
-        existing.setAddress(updatedEmployee.getAddress());
-
-        Employee saved = service.saveEmployee(existing);
-        return ResponseEntity.ok(saved);
-    }
-
-    // Apply a salary hike (PUT) : example -> /api/employees/3/salary?hikePercentage=10
-    @PutMapping("/{id:\\d+}/salary")
-    public ResponseEntity<Employee> applyHike(@PathVariable Long id,
-                                              @RequestParam double hikePercentage) {
+    // Update - ADMIN or MANAGER
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ResponseEntity<AppUser> updateEmployee(@PathVariable Long id, @RequestBody AppUser updatedEmployee) {
         try {
-            Employee updated = service.applySalaryHike(id, hikePercentage);
-            return ResponseEntity.ok(updated);
-        } catch (RuntimeException ex) {
+            return ResponseEntity.ok(service.updateEmployee(id, updatedEmployee));
+        } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
         }
     }
 
-    // Delete employee by numeric id
-    @DeleteMapping("/{id:\\d+}")
+    // Salary Hike - ADMIN or MANAGER
+    @PutMapping("/{id}/salary")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ResponseEntity<AppUser> applyHike(@PathVariable Long id, @RequestParam double hikePercentage) {
+        try {
+            return ResponseEntity.ok(service.applySalaryHike(id, hikePercentage));
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    // Delete - ADMIN ONLY
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteEmployee(@PathVariable Long id) {
         service.deleteEmployee(id);
         return ResponseEntity.noContent().build();
-    }
-
-    // Search by role
-    @GetMapping("/search/role/{role}")
-    public ResponseEntity<List<Employee>> searchByRole(@PathVariable String role) {
-        return ResponseEntity.ok(service.searchByRole(role));
-    }
-
-    // Search by city
-    @GetMapping("/search/city/{city}")
-    public ResponseEntity<List<Employee>> searchByCity(@PathVariable String city) {
-        return ResponseEntity.ok(service.searchByCity(city));
-    }
-
-    // Salary above
-    @GetMapping("/salary/above/{amount}")
-    public ResponseEntity<List<Employee>> findBySalaryAbove(@PathVariable double amount) {
-        return ResponseEntity.ok(service.findBySalaryAbove(amount));
-    }
-
-    // Count
-    @GetMapping("/count")
-    public ResponseEntity<Long> getTotalCount() {
-        return ResponseEntity.ok(service.getTotalCount());
     }
 }
