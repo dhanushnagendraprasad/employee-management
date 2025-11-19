@@ -1,29 +1,42 @@
 package com.example.employee_management.service;
 
-import com.example.employee_management.model.User;
-import com.example.employee_management.repository.UserRepository;
-import org.springframework.security.core.userdetails.*;
+import com.example.employee_management.model.AppUser;
+import com.example.employee_management.repository.AppUserRepository;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.*;
 import org.springframework.stereotype.Service;
-import java.util.Collections;
+
+import java.util.stream.Collectors;
 
 @Service
 public class CustomUserDetailsService implements UserDetailsService {
 
-    private final UserRepository users;
+    private final AppUserRepository repository;
 
-    public CustomUserDetailsService(UserRepository users) {
-        this.users = users;
+    // Constructor injection of the NEW repository
+    public CustomUserDetailsService(AppUserRepository repository) {
+        this.repository = repository;
     }
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        User u = users.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
+        System.out.println(">>> [LOGIN] Searching 'app_users' table for: " + username);
+
+        AppUser user = repository.findByUsername(username)
+                .orElseThrow(() -> {
+                    System.out.println(">>> [LOGIN] User NOT found in 'app_users'");
+                    return new UsernameNotFoundException("User not found");
+                });
+
+        System.out.println(">>> [LOGIN] Found User: " + user.getUsername());
+        System.out.println(">>> [LOGIN] DB Password Hash: " + user.getPassword());
+
         return new org.springframework.security.core.userdetails.User(
-                u.getUsername(),
-                u.getPassword(),
-                Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + u.getRole()))
+                user.getUsername(),
+                user.getPassword(),
+                user.getRoles().stream()
+                    .map(role -> new SimpleGrantedAuthority(role.getName()))
+                    .collect(Collectors.toList())
         );
     }
 }

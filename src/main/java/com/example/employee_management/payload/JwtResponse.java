@@ -8,7 +8,6 @@ public class JwtResponse {
         this.token = token;
         this.username = username;
     }
-
     public String getToken() { return token; }
     public String getUsername() { return username; }
 }

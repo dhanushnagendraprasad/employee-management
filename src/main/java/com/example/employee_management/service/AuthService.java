@@ -1,41 +1,45 @@
 package com.example.employee_management.service;
 
-import com.example.employee_management.model.User;
-import com.example.employee_management.repository.UserRepository;
-import com.example.employee_management.security.JwtTokenUtil;
+import com.example.employee_management.model.AppUser;
+import com.example.employee_management.model.Role;
+import com.example.employee_management.repository.AppUserRepository;
+import com.example.employee_management.repository.RoleRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.util.Collections;
+import java.util.HashSet;
 
 @Service
 public class AuthService {
 
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
-    private final JwtTokenUtil jwtTokenUtil;
+    private final AppUserRepository userRepository;
+    private final RoleRepository roleRepository;
+    private final PasswordEncoder encoder;
 
-    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtTokenUtil jwtTokenUtil) {
+    public AuthService(AppUserRepository userRepository, RoleRepository roleRepository, PasswordEncoder encoder) {
         this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
-        this.jwtTokenUtil = jwtTokenUtil;
+        this.roleRepository = roleRepository;
+        this.encoder = encoder;
     }
 
-    public String login(String username, String password) {
-        User user = userRepository.findByUsername(username).orElseThrow(
-                () -> new RuntimeException("Invalid credentials")
-        );
-
-        if (!passwordEncoder.matches(password, user.getPassword())) {
-            throw new RuntimeException("Invalid credentials");
+    public AppUser register(AppUser user, String roleName) {
+        if(userRepository.existsByUsername(user.getUsername())) {
+            throw new RuntimeException("Username exists");
         }
 
-        return jwtTokenUtil.generateToken(user.getUsername(), user.getRole());
-    }
+        System.out.println(">>> [REGISTER] Raw Password: " + user.getPassword());
+        
+        // Encrypt the password before saving
+        user.setPassword(encoder.encode(user.getPassword()));
 
-    public User register(User user) {
-        if (userRepository.existsByUsername(user.getUsername())) {
-            throw new RuntimeException("User already exists");
-        }
-        user.setPassword(passwordEncoder.encode(user.getPassword()));
-        return userRepository.save(user);
+        Role role = roleRepository.findByName(roleName)
+                .orElseThrow(() -> new RuntimeException("Role not found: " + roleName));
+
+        user.setRoles(new HashSet<>(Collections.singletonList(role)));
+        
+        AppUser savedUser = userRepository.save(user);
+        System.out.println(">>> [REGISTER] User Saved. ID: " + savedUser.getId());
+        return savedUser;
     }
 }

@@ -1,10 +1,10 @@
 package com.example.employee_management.repository;
 
-import com.example.employee_management.model.User;
+import com.example.employee_management.model.AppUser;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
 
-public interface UserRepository extends JpaRepository<User, Long> {
-    Optional<User> findByUsername(String username);
+public interface AppUserRepository extends JpaRepository<AppUser, Long> {
+    Optional<AppUser> findByUsername(String username);
     boolean existsByUsername(String username);
 }

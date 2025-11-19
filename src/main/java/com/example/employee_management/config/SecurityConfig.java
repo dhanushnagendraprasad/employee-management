@@ -6,55 +6,42 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
+@EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
 
     private final JwtTokenUtil jwtTokenUtil;
+    private final UserDetailsService userDetailsService; // Added dependency
 
-    public SecurityConfig(JwtTokenUtil jwtTokenUtil) {
+    // Inject UserDetailsService here
+    public SecurityConfig(JwtTokenUtil jwtTokenUtil, UserDetailsService userDetailsService) {
         this.jwtTokenUtil = jwtTokenUtil;
+        this.userDetailsService = userDetailsService;
     }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        JwtAuthenticationFilter jwtAuthenticationFilter = new JwtAuthenticationFilter(jwtTokenUtil);
+        // Update: Pass BOTH jwtTokenUtil and userDetailsService
+        JwtAuthenticationFilter jwtFilter = new JwtAuthenticationFilter(jwtTokenUtil, userDetailsService);
 
-        http
-            .csrf(csrf -> csrf.disable())
-            .cors(cors -> {})
+        http.csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
-                // public
-                .requestMatchers("/api/auth/**").permitAll()
-
-                // stats: ADMIN only
-                .requestMatchers("/api/employees/stats/**").hasRole("ADMIN")
-
-                // salary & city: ADMIN or EMPLOYEE
-                .requestMatchers("/api/employees/salary/**", "/api/employees/city/**").hasAnyRole("ADMIN", "EMPLOYEE")
-
-                // all other employee endpoints require ADMIN or EMPLOYEE (adjust as needed)
-                .requestMatchers("/api/employees/**").hasAnyRole("ADMIN", "EMPLOYEE")
-
-                .anyRequest().authenticated()
+                .requestMatchers("/api/auth/**").permitAll() // Allow login/register
+                .anyRequest().authenticated() // Lock everything else
             )
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+            .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
         return http.build();
-    }
-
-    @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
-        return authConfig.getAuthenticationManager();
     }
 
     @Bean
@@ -62,18 +49,8 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    // CORS
     @Bean
-    public WebMvcConfigurer corsConfigurer() {
-        return new WebMvcConfigurer() {
-            @Override
-            public void addCorsMappings(CorsRegistry registry) {
-                registry.addMapping("/**")
-                        .allowedOrigins("*")
-                        .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                        .allowedHeaders("*")
-                        .exposedHeaders("Authorization");
-            }
-        };
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
     }
 }
