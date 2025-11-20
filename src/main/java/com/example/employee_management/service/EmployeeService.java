@@ -6,6 +6,10 @@ import com.example.employee_management.model.AppUser;
 import com.example.employee_management.model.Role;
 import com.example.employee_management.repository.AppUserRepository;
 import com.example.employee_management.repository.RoleRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +31,8 @@ public class EmployeeService {
         this.passwordEncoder = passwordEncoder;
     }
 
+    // --- CRUD METHODS ---
+
     @Transactional
     public AppUser createEmployee(EmployeeDTO dto) {
         AppUser user = new AppUser();
@@ -34,11 +40,9 @@ public class EmployeeService {
         user.setUsername(dto.getUsername());
         user.setSalary(dto.getSalary() == null ? 400000.0 : dto.getSalary());
         
-        // Set Password (Required for AppUser)
         String rawPassword = dto.getPassword() != null ? dto.getPassword() : "default123";
         user.setPassword(passwordEncoder.encode(rawPassword));
 
-        // Set Address
         if (dto.getAddress() != null) {
             Address address = new Address();
             address.setCity(dto.getAddress().getCity());
@@ -48,7 +52,6 @@ public class EmployeeService {
             user.setAddress(address);
         }
 
-        // Assign Role (Default to EMPLOYEE if not specified)
         String roleName = dto.getRole() != null ? dto.getRole() : "ROLE_EMPLOYEE";
         Role role = roleRepository.findByName(roleName)
                 .orElseThrow(() -> new RuntimeException("Role not found: " + roleName));
@@ -57,27 +60,29 @@ public class EmployeeService {
         return repository.save(user);
     }
 
-    public List<AppUser> getAllEmployees() {
-        return repository.findAll();
-    }
+    // UPDATED: Pagination and Sorting support
+    public Page<AppUser> getAllEmployees(int page, int size, String sortBy, String sortDir) {
+        Sort sort = sortDir.equalsIgnoreCase(Sort.Direction.ASC.name()) 
+                    ? Sort.by(sortBy).ascending() 
+                    : Sort.by(sortBy).descending();
 
-    public AppUser getEmployeeById(Long id) {
-        return repository.findById(id).orElse(null);
+        Pageable pageable = PageRequest.of(page, size, sort);
+        return repository.findAll(pageable);
     }
+    
+    public AppUser getEmployeeById(Long id) { return repository.findById(id).orElse(null); }
 
     @Transactional
     public AppUser updateEmployee(Long id, AppUser updatedData) {
         AppUser existing = repository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
-        
         if(updatedData.getEmail() != null) existing.setEmail(updatedData.getEmail());
         if(updatedData.getSalary() != null) existing.setSalary(updatedData.getSalary());
-        
-        // Only update address if provided
         if (updatedData.getAddress() != null && existing.getAddress() != null) {
             existing.getAddress().setCity(updatedData.getAddress().getCity());
             existing.getAddress().setState(updatedData.getAddress().getState());
+            existing.getAddress().setCountry(updatedData.getAddress().getCountry());
+            existing.getAddress().setPincode(updatedData.getAddress().getPincode());
         }
-
         return repository.save(existing);
     }
 
@@ -89,7 +94,14 @@ public class EmployeeService {
         return repository.save(user);
     }
 
-    public void deleteEmployee(Long id) {
-        repository.deleteById(id);
-    }
+    public void deleteEmployee(Long id) { repository.deleteById(id); }
+
+    // --- SEARCH METHODS (FILTERS) ---
+    public List<AppUser> searchByCity(String city) { return repository.findByAddress_City(city); }
+    public List<AppUser> searchByState(String state) { return repository.findByAddress_State(state); }
+    public List<AppUser> searchByCountry(String country) { return repository.findByAddress_Country(country); }
+    public List<AppUser> searchByPincode(String pincode) { return repository.findByAddress_Pincode(pincode); }
+    public List<AppUser> searchByRole(String roleName) { return repository.findByRoles_Name(roleName); }
+    public List<AppUser> searchBySalaryAbove(Double salary) { return repository.findBySalaryGreaterThanEqual(salary); }
+    public List<AppUser> searchBySalaryBelow(Double salary) { return repository.findBySalaryLessThanEqual(salary); }
 }
