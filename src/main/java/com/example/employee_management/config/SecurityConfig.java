@@ -20,9 +20,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final JwtTokenUtil jwtTokenUtil;
-    private final UserDetailsService userDetailsService; // Added dependency
+    private final UserDetailsService userDetailsService;
 
-    // Inject UserDetailsService here
     public SecurityConfig(JwtTokenUtil jwtTokenUtil, UserDetailsService userDetailsService) {
         this.jwtTokenUtil = jwtTokenUtil;
         this.userDetailsService = userDetailsService;
@@ -30,13 +29,25 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        // Update: Pass BOTH jwtTokenUtil and userDetailsService
         JwtAuthenticationFilter jwtFilter = new JwtAuthenticationFilter(jwtTokenUtil, userDetailsService);
 
         http.csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**").permitAll() // Allow login/register
-                .anyRequest().authenticated() // Lock everything else
+                // 1. Allow Auth endpoints (Login/Register)
+                .requestMatchers("/api/auth/**").permitAll()
+                
+                // 2. Allow Standard Error page (Fixes 403 on 404 issues)
+                .requestMatchers("/error").permitAll()
+
+                // 3. Allow Swagger UI & OpenAPI Docs (The new part)
+                .requestMatchers(
+                    "/v3/api-docs/**",
+                    "/swagger-ui/**",
+                    "/swagger-ui.html"
+                ).permitAll()
+
+                // 4. Lock everything else
+                .anyRequest().authenticated()
             )
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
             .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
