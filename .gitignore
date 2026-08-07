@@ -36,3 +36,6 @@ target/
 ### Logs ###
 logs/
 *.log
+### Environment ###
+.env
+.metadata/
