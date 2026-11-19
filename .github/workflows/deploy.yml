@@ -1,0 +1,28 @@
+name: Build and Deploy to Home Server
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+      - name: Pull latest code on dr006tx
+        run: |
+          cd /home/nagendd1/employee-management
+          git fetch origin
+          git reset --hard origin/main
+
+      - name: Build JAR with Maven
+        run: |
+          cd /home/nagendd1/employee-management
+          mvn clean package -DskipTests
+
+      - name: Restart Spring Boot Service
+        run: |
+          sudo systemctl restart employee-management
+          sleep 5
+          sudo systemctl status employee-management --no-pager
