@@ -39,3 +39,26 @@ logs/
 ### Environment ###
 .env
 .metadata/
+
+### Playwright Prep Files ###
+NotesForInterview.md
+Gemini.md
+PROGRESS.md
+readme_playwright.md
+
+### Node & Dependencies ###
+**/node_modules/
+
+### Frontend Build Output ###
+frontend/dist/
+frontend/dist-ssr/
+
+### Playwright Artifacts ###
+**/test-results/
+**/playwright-report/
+**/blob-report/
+**/.cache/
+
+### Operating System ###
+.DS_Store
+Thumbs.db

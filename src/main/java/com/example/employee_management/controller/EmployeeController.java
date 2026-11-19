@@ -74,6 +74,20 @@ public class EmployeeController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("/bulk-delete")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> deleteEmployees(@RequestBody List<Long> ids) {
+        service.deleteEmployees(ids);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/bulk-hike")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ResponseEntity<Void> applyBulkHike(@RequestBody List<Long> ids, @RequestParam double hikePercentage) {
+        service.applyBulkSalaryHike(ids, hikePercentage);
+        return ResponseEntity.ok().build();
+    }
+
     // --- SEARCH ENDPOINTS ---
 
     @GetMapping("/search/city/{city}")
@@ -119,5 +133,11 @@ public class EmployeeController {
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<List<AppUser>> searchBySalaryBelow(@PathVariable Double amount) {
         return ResponseEntity.ok(service.searchBySalaryBelow(amount));
+    }
+
+    @GetMapping("/search/level/{level}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ResponseEntity<List<AppUser>> searchByLevel(@PathVariable Integer level) {
+        return ResponseEntity.ok(service.searchByLevelNo(level));
     }
 }

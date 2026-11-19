@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { employeeService, type Employee, type PageResponse } from '../services/employeeService';
-import { LogOut, Users, Search, TrendingUp, Trash2, MapPin, Plus, Edit2, ChevronLeft, ChevronRight, XCircle } from 'lucide-react';
+import { LogOut, Users, Search, TrendingUp, Trash2, MapPin, Plus, Edit2, ChevronLeft, ChevronRight, XCircle, Download, CheckSquare } from 'lucide-react';
 import EmployeeModal from '../components/EmployeeModal';
 import HikeModal from '../components/HikeModal';
 import ConfirmModal from '../components/ConfirmModal';
@@ -16,11 +16,14 @@ const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   
+  // Filtering
+  const [filterType, setFilterType] = useState('city');
+  const [isSearching, setIsSearching] = useState(false);
+
   // Pagination
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
-  const [size] = useState(6); // cards per page
-  const [isSearching, setIsSearching] = useState(false);
+  const [size] = useState(6);
 
   // Modals state
   const [isEmpModalOpen, setIsEmpModalOpen] = useState(false);
@@ -31,6 +34,11 @@ const Dashboard: React.FC = () => {
 
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [empToDelete, setEmpToDelete] = useState<number | null>(null);
+
+  // Bulk Actions
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [isBulkHikeOpen, setIsBulkHikeOpen] = useState(false);
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
 
   const isAdminOrManager = user?.roles?.some(r => r.name === 'ROLE_ADMIN' || r.name === 'ROLE_MANAGER') || false;
   const isAdmin = user?.roles?.some(r => r.name === 'ROLE_ADMIN') || false;
@@ -59,17 +67,21 @@ const Dashboard: React.FC = () => {
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!searchTerm.trim()) {
-      setIsSearching(false);
-      setPage(0);
-      loadEmployees();
+      clearSearch();
       return;
     }
     try {
       setLoading(true);
       setIsSearching(true);
-      const data = await employeeService.searchByCity(searchTerm);
+      setSelectedIds(new Set());
+      let data: Employee[] = [];
+      if (filterType === 'city') {
+        data = await employeeService.searchByCity(searchTerm);
+      } else if (filterType === 'level') {
+        data = await employeeService.searchByLevel(Number(searchTerm));
+      }
       setEmployees(data);
-      setTotalPages(1); // Search returns a list, not paginated in current backend implementation
+      setTotalPages(1);
     } catch (error) {
       console.error('Search failed', error);
       setEmployees([]);
@@ -82,6 +94,8 @@ const Dashboard: React.FC = () => {
     setSearchTerm('');
     setIsSearching(false);
     setPage(0);
+    setSelectedIds(new Set());
+    loadEmployees();
   };
 
   const handleSaveEmployee = async (empData: Partial<Employee>) => {
@@ -91,22 +105,70 @@ const Dashboard: React.FC = () => {
       await employeeService.createEmployee(empData);
     }
     if (!isSearching) loadEmployees();
+    else handleSearch({ preventDefault: () => {} } as any);
   };
 
   const handleApplyHike = async (percentage: number) => {
     if (empForHike) {
       await employeeService.applyHike(empForHike.id, percentage);
-      if (!isSearching) loadEmployees();
-      else handleSearch({ preventDefault: () => {} } as any);
+    } else if (isBulkHikeOpen) {
+      await employeeService.applyBulkHike(Array.from(selectedIds), percentage);
+      setSelectedIds(new Set());
+      setIsBulkHikeOpen(false);
     }
+    if (!isSearching) loadEmployees();
+    else handleSearch({ preventDefault: () => {} } as any);
   };
 
   const confirmDelete = async () => {
     if (empToDelete) {
-      await employeeService.deleteEmployee(empToDelete);
-      if (!isSearching) loadEmployees();
-      else handleSearch({ preventDefault: () => {} } as any);
+      await employeeService.deleteEmployees([empToDelete]);
+    } else if (isBulkDeleteOpen) {
+      await employeeService.deleteEmployees(Array.from(selectedIds));
+      setSelectedIds(new Set());
+      setIsBulkDeleteOpen(false);
     }
+    if (!isSearching) loadEmployees();
+    else handleSearch({ preventDefault: () => {} } as any);
+  };
+
+  const toggleSelect = (id: number) => {
+    const newSet = new Set(selectedIds);
+    if (newSet.has(id)) newSet.delete(id);
+    else newSet.add(id);
+    setSelectedIds(newSet);
+  };
+
+  const selectAll = () => {
+    if (selectedIds.size === employees.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(employees.map(e => e.id)));
+    }
+  };
+
+  const exportCSV = () => {
+    if (employees.length === 0) return;
+    const headers = ['ID', 'Username', 'Email', 'Role', 'Salary', 'Level', 'Department', 'Project', 'Skill', 'City'];
+    const rows = employees.map(e => [
+      e.id,
+      e.username,
+      e.email,
+      e.roles?.map(r => r.name.replace('ROLE_', '')).join('|') || '',
+      e.salary,
+      e.levelNo || '',
+      e.department || '',
+      e.projectName || '',
+      e.primarySkill || '',
+      e.address?.city || ''
+    ]);
+    
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'employees.csv';
+    link.click();
   };
 
   const handleLogout = () => {
@@ -152,29 +214,51 @@ const Dashboard: React.FC = () => {
                 onClick={() => { setEmpToEdit(null); setIsEmpModalOpen(true); }}
                 style={{ marginLeft: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
               >
-                <Plus size={16} /> Add Employee
+                <Plus size={16} /> Add
+              </button>
+            )}
+            {isAdminOrManager && (
+              <button onClick={exportCSV} className="btn btn-secondary" style={{ marginLeft: '0.5rem' }} title="Export to CSV">
+                <Download size={16} /> Export
               </button>
             )}
           </div>
           
           {isAdminOrManager && (
-            <form onSubmit={handleSearch} className="search-bar">
-              <Search size={18} className="search-icon" />
-              <input 
-                type="text" 
-                placeholder="Search by city..." 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="input-field"
-              />
-              {isSearching && (
-                <button type="button" onClick={clearSearch} className="icon-btn" style={{ position: 'absolute', right: '10px' }}>
-                  <XCircle size={16} />
-                </button>
-              )}
-            </form>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              <select className="input-field" style={{ width: '120px' }} value={filterType} onChange={e => setFilterType(e.target.value)}>
+                <option value="city">City</option>
+                <option value="level">Level</option>
+              </select>
+              <form onSubmit={handleSearch} className="search-bar">
+                <Search size={18} className="search-icon" />
+                <input 
+                  type="text" 
+                  placeholder={`Search by ${filterType}...`}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="input-field"
+                />
+                {isSearching && (
+                  <button type="button" onClick={clearSearch} className="icon-btn" style={{ position: 'absolute', right: '10px' }}>
+                    <XCircle size={16} />
+                  </button>
+                )}
+              </form>
+            </div>
           )}
         </header>
+
+        {selectedIds.size > 0 && (
+          <div className="bulk-action-bar glass-panel animate-fade-in">
+            <span>{selectedIds.size} employees selected</span>
+            <div className="bulk-actions">
+              <button onClick={() => setIsBulkHikeOpen(true)} className="btn btn-primary">Bulk Hike</button>
+              {isAdmin && <button onClick={() => setIsBulkDeleteOpen(true)} className="btn btn-danger">Bulk Delete</button>}
+              <button onClick={() => setSelectedIds(new Set())} className="btn btn-secondary">Cancel</button>
+            </div>
+          </div>
+        )}
 
         <div className="content-area">
           {!isAdminOrManager ? (
@@ -189,10 +273,23 @@ const Dashboard: React.FC = () => {
             </div>
           ) : (
             <div className="employee-wrapper">
+              {employees.length > 0 && (
+                 <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <button onClick={selectAll} className="btn btn-secondary btn-sm" style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}>
+                      <CheckSquare size={14} /> {selectedIds.size === employees.length ? 'Deselect All' : 'Select All on Page'}
+                    </button>
+                 </div>
+              )}
               <div className="employee-grid">
                 {employees.map(emp => (
-                  <div key={emp.id} className="glass-card employee-card animate-scale-up">
+                  <div key={emp.id} className={`glass-card employee-card animate-scale-up ${selectedIds.has(emp.id) ? 'selected' : ''}`}>
                     <div className="emp-card-header">
+                      <input 
+                        type="checkbox" 
+                        className="emp-checkbox"
+                        checked={selectedIds.has(emp.id)}
+                        onChange={() => toggleSelect(emp.id)}
+                      />
                       <div className="emp-avatar">{emp.username.charAt(0).toUpperCase()}</div>
                       <div className="emp-title">
                         <h3>{emp.username}</h3>
@@ -207,13 +304,29 @@ const Dashboard: React.FC = () => {
                     
                     <div className="emp-details">
                       <div className="detail-row">
+                        <span className="label">Level:</span>
+                        <span className="value">L{emp.levelNo || 1}</span>
+                      </div>
+                      <div className="detail-row">
                         <span className="label">Salary:</span>
                         <span className="value" style={{color: 'var(--primary-light)', fontWeight: 600}}>${emp.salary ? emp.salary.toLocaleString() : '0'}</span>
                       </div>
-                      {emp.address && emp.address.city && (
+                      {emp.department && (
                         <div className="detail-row">
+                          <span className="label">Dept:</span>
+                          <span className="value">{emp.department}</span>
+                        </div>
+                      )}
+                      {emp.primarySkill && (
+                        <div className="detail-row">
+                          <span className="label">Skill:</span>
+                          <span className="value">{emp.primarySkill}</span>
+                        </div>
+                      )}
+                      {emp.address && emp.address.city && (
+                        <div className="detail-row" style={{ marginTop: '0.25rem' }}>
                           <MapPin size={16} className="text-muted" />
-                          <span className="value">{emp.address.city}, {emp.address.country}</span>
+                          <span className="value text-muted" style={{ fontSize: '0.8rem' }}>{emp.address.city}, {emp.address.country}</span>
                         </div>
                       )}
                     </div>
@@ -284,6 +397,13 @@ const Dashboard: React.FC = () => {
         onApply={handleApplyHike} 
         employeeName={empForHike?.name || ''} 
       />
+      
+      <HikeModal 
+        isOpen={isBulkHikeOpen} 
+        onClose={() => setIsBulkHikeOpen(false)} 
+        onApply={handleApplyHike} 
+        employeeName={`${selectedIds.size} selected employees`} 
+      />
 
       <ConfirmModal 
         isOpen={isConfirmOpen} 
@@ -291,6 +411,14 @@ const Dashboard: React.FC = () => {
         onConfirm={confirmDelete} 
         title="Delete Employee" 
         message="Are you sure you want to delete this employee? This action cannot be undone." 
+      />
+      
+      <ConfirmModal 
+        isOpen={isBulkDeleteOpen} 
+        onClose={() => setIsBulkDeleteOpen(false)} 
+        onConfirm={confirmDelete} 
+        title="Bulk Delete" 
+        message={`Are you sure you want to delete ${selectedIds.size} employees? This action cannot be undone.`} 
       />
     </div>
   );

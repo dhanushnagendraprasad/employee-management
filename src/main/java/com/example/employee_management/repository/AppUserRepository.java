@@ -23,4 +23,7 @@ public interface AppUserRepository extends JpaRepository<AppUser, Long> {
     // --- 3. Role Filters (Traversing Roles Entity) ---
     // This finds users who have a specific role (e.g., "ROLE_MANAGER")
     List<AppUser> findByRoles_Name(String roleName);
+    
+    // --- 4. Level Filter ---
+    List<AppUser> findByLevelNo(Integer levelNo);
 }

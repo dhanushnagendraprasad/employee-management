@@ -13,6 +13,9 @@ export interface Employee {
   email: string;
   salary: number;
   levelNo: number;
+  department: string;
+  projectName: string;
+  primarySkill: string;
   address: Address;
   roles: { id: number, name: string }[];
 }
@@ -49,9 +52,22 @@ export const employeeService = {
     const response = await api.put<Employee>(`/employees/${id}/salary?hikePercentage=${hikePercentage}`);
     return response.data;
   },
+
+  applyBulkHike: async (ids: number[], hikePercentage: number) => {
+    await api.put(`/employees/bulk-hike?hikePercentage=${hikePercentage}`, ids);
+  },
   
+  deleteEmployees: async (ids: number[]) => {
+    await api.post(`/employees/bulk-delete`, ids);
+  },
+
   searchByCity: async (city: string) => {
     const response = await api.get<Employee[]>(`/employees/search/city/${city}`);
+    return response.data;
+  },
+  
+  searchByLevel: async (level: number) => {
+    const response = await api.get<Employee[]>(`/employees/search/level/${level}`);
     return response.data;
   }
 };

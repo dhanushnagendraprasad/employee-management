@@ -87,11 +87,11 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({ isOpen, onClose, onSave, 
         <form onSubmit={handleSubmit} className="modal-form">
           <div className="form-group">
             <label>Username</label>
-            <input type="text" name="username" value={formData.username || ''} onChange={handleChange} required className="input-field" />
+            <input type="text" name="username" value={formData.username || ''} onChange={handleChange} required disabled={!!employee} className="input-field" />
           </div>
           <div className="form-group">
             <label>Email</label>
-            <input type="email" name="email" value={formData.email || ''} onChange={handleChange} required className="input-field" />
+            <input type="email" name="email" value={formData.email || ''} onChange={handleChange} required disabled={!!employee} className="input-field" />
           </div>
           {!employee && (
             <div className="form-group">
@@ -108,6 +108,21 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({ isOpen, onClose, onSave, 
               <label>Level</label>
               <input type="number" name="levelNo" value={formData.levelNo || 1} onChange={handleChange} className="input-field" />
             </div>
+          </div>
+          
+          <div className="form-row">
+            <div className="form-group">
+              <label>Department</label>
+              <input type="text" name="department" value={formData.department || ''} onChange={handleChange} className="input-field" />
+            </div>
+            <div className="form-group">
+              <label>Project Name</label>
+              <input type="text" name="projectName" value={formData.projectName || ''} onChange={handleChange} className="input-field" />
+            </div>
+          </div>
+          <div className="form-group">
+            <label>Primary Skill</label>
+            <input type="text" name="primarySkill" value={formData.primarySkill || ''} onChange={handleChange} className="input-field" />
           </div>
           
           <h4>Address</h4>
