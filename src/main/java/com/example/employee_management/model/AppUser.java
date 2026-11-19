@@ -23,6 +23,11 @@ public class AppUser {
 
     private String email;
     private Double salary;
+    
+    private String department;
+    private String projectName;
+    private String primarySkill;
+    private Integer levelNo;
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
@@ -51,4 +56,13 @@ public class AppUser {
     public void setRoles(Set<Role> roles) { this.roles = roles; }
     public Address getAddress() { return address; }
     public void setAddress(Address address) { this.address = address; }
+    
+    public String getDepartment() { return department; }
+    public void setDepartment(String department) { this.department = department; }
+    public String getProjectName() { return projectName; }
+    public void setProjectName(String projectName) { this.projectName = projectName; }
+    public String getPrimarySkill() { return primarySkill; }
+    public void setPrimarySkill(String primarySkill) { this.primarySkill = primarySkill; }
+    public Integer getLevelNo() { return levelNo; }
+    public void setLevelNo(Integer levelNo) { this.levelNo = levelNo; }
 }

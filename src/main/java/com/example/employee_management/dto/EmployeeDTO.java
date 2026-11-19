@@ -8,6 +8,9 @@ public class EmployeeDTO {
     private AddressDTO address;
     private String username; // optional
     private String password; // optional while creating user+employee
+    private String department;
+    private String projectName;
+    private String primarySkill;
 
     // getters & setters
     public String getEmail() { return email; }
@@ -24,4 +27,11 @@ public class EmployeeDTO {
     public void setUsername(String username) { this.username = username; }
     public String getPassword() { return password; }
     public void setPassword(String password) { this.password = password; }
+    
+    public String getDepartment() { return department; }
+    public void setDepartment(String department) { this.department = department; }
+    public String getProjectName() { return projectName; }
+    public void setProjectName(String projectName) { this.projectName = projectName; }
+    public String getPrimarySkill() { return primarySkill; }
+    public void setPrimarySkill(String primarySkill) { this.primarySkill = primarySkill; }
 }

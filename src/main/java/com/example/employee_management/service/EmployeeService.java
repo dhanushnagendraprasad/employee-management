@@ -39,6 +39,10 @@ public class EmployeeService {
         user.setEmail(dto.getEmail());
         user.setUsername(dto.getUsername());
         user.setSalary(dto.getSalary() == null ? 400000.0 : dto.getSalary());
+        user.setLevelNo(dto.getLevelNo() == null ? 1 : dto.getLevelNo());
+        user.setDepartment(dto.getDepartment());
+        user.setProjectName(dto.getProjectName());
+        user.setPrimarySkill(dto.getPrimarySkill());
         
         String rawPassword = dto.getPassword() != null ? dto.getPassword() : "default123";
         user.setPassword(passwordEncoder.encode(rawPassword));
@@ -75,9 +79,17 @@ public class EmployeeService {
     @Transactional
     public AppUser updateEmployee(Long id, AppUser updatedData) {
         AppUser existing = repository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
-        if(updatedData.getEmail() != null) existing.setEmail(updatedData.getEmail());
-        if(updatedData.getSalary() != null) existing.setSalary(updatedData.getSalary());
-        if (updatedData.getAddress() != null && existing.getAddress() != null) {
+        
+        if (updatedData.getSalary() != null) existing.setSalary(updatedData.getSalary());
+        if (updatedData.getLevelNo() != null) existing.setLevelNo(updatedData.getLevelNo());
+        if (updatedData.getDepartment() != null) existing.setDepartment(updatedData.getDepartment());
+        if (updatedData.getProjectName() != null) existing.setProjectName(updatedData.getProjectName());
+        if (updatedData.getPrimarySkill() != null) existing.setPrimarySkill(updatedData.getPrimarySkill());
+        
+        if (updatedData.getAddress() != null) {
+            if (existing.getAddress() == null) {
+                existing.setAddress(new Address());
+            }
             existing.getAddress().setCity(updatedData.getAddress().getCity());
             existing.getAddress().setState(updatedData.getAddress().getState());
             existing.getAddress().setCountry(updatedData.getAddress().getCountry());
@@ -94,7 +106,23 @@ public class EmployeeService {
         return repository.save(user);
     }
 
+    @Transactional
+    public void applyBulkSalaryHike(List<Long> ids, double hikePercentage) {
+        List<AppUser> users = repository.findAllById(ids);
+        for (AppUser user : users) {
+            if (user.getSalary() != null) {
+                user.setSalary(user.getSalary() + (user.getSalary() * hikePercentage / 100.0));
+            }
+        }
+        repository.saveAll(users);
+    }
+
     public void deleteEmployee(Long id) { repository.deleteById(id); }
+
+    @Transactional
+    public void deleteEmployees(List<Long> ids) {
+        repository.deleteAllById(ids);
+    }
 
     // --- SEARCH METHODS (FILTERS) ---
     public List<AppUser> searchByCity(String city) { return repository.findByAddress_City(city); }
@@ -104,4 +132,5 @@ public class EmployeeService {
     public List<AppUser> searchByRole(String roleName) { return repository.findByRoles_Name(roleName); }
     public List<AppUser> searchBySalaryAbove(Double salary) { return repository.findBySalaryGreaterThanEqual(salary); }
     public List<AppUser> searchBySalaryBelow(Double salary) { return repository.findBySalaryLessThanEqual(salary); }
+    public List<AppUser> searchByLevelNo(Integer levelNo) { return repository.findByLevelNo(levelNo); }
 }
