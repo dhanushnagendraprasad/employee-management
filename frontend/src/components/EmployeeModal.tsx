@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import type { Employee, Address } from '../services/employeeService';
+import type { Employee } from '../services/employeeService';
 import { X } from 'lucide-react';
 import './Modal.css';
 
@@ -109,7 +109,7 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({ isOpen, onClose, onSave, 
               <input type="number" name="levelNo" value={formData.levelNo || 1} onChange={handleChange} className="input-field" />
             </div>
           </div>
-          
+
           <div className="form-row">
             <div className="form-group">
               <label>Department</label>
@@ -124,7 +124,7 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({ isOpen, onClose, onSave, 
             <label>Primary Skill</label>
             <input type="text" name="primarySkill" value={formData.primarySkill || ''} onChange={handleChange} className="input-field" />
           </div>
-          
+
           <h4>Address</h4>
           <div className="form-row">
             <div className="form-group">

@@ -21,6 +21,12 @@ jobs:
           cd /home/nagendd1/employee-management
           mvn clean package -DskipTests
 
+      - name: Build Frontend with Vite
+        run: |
+          cd /home/nagendd1/employee-management/frontend
+          npm ci
+          npm run build
+
       - name: Restart Spring Boot Service
         run: |
           sudo systemctl restart employee-management
