@@ -1,32 +1,55 @@
-# React + TypeScript + Vite
+# Employee Management System — Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+A modern Single Page Application (SPA) built with React 19, TypeScript, and Vite, featuring a glassmorphism design system and full integration with the Spring Boot REST API.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 🛠️ Tech Stack & Dependencies
 
-## React Compiler
+* **Framework:** React 19 (`react`, `react-dom`)
+* **Language:** TypeScript 5
+* **Build Tool & Dev Server:** Vite 8
+* **Routing:** React Router v7 (`react-router-dom`)
+* **State Management:** Zustand (Client-side authentication & user session persistence)
+* **HTTP Client:** Axios with JWT interceptors
+* **Icons:** Lucide React (`lucide-react`)
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+---
 
-## Expanding the Oxlint configuration
+## 📂 Architecture & Directory Structure
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```text
+frontend/src/
+├── assets/          # Static logos and hero illustrations
+├── components/      # Reusable UI modals (EmployeeModal, ConfirmModal, HikeModal)
+├── pages/           # Application route pages
+│   ├── Login.tsx       # JWT login with animated feedback
+│   ├── Signup.tsx      # Account registration with role selection
+│   └── Dashboard.tsx   # Employee directory grid, filters, pagination, and search
+├── services/        # API communication services
+│   ├── api.ts             # Axios instance configured with base URL
+│   ├── authService.ts     # Auth endpoints (/api/auth/login, /api/auth/register)
+│   └── employeeService.ts # Employee CRUD & search query handlers
+├── store/           # Zustand state store
+│   └── authStore.ts       # Authentication tokens and decoded role state
+├── App.tsx          # Root routing and ProtectedRoute guard wrappers
+└── main.tsx         # React application entry point
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+---
+
+## 🚀 Local Development
+
+```powershell
+# Install dependencies
+npm install
+
+# Start Vite dev server (defaults to http://localhost:5173)
+npm run dev
+
+# Type-check and build production distribution package
+npm run build
+
+# Run linter
+npm run lint
+```
