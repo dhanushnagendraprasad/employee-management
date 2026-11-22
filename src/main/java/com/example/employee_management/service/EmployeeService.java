@@ -80,6 +80,7 @@ public class EmployeeService {
     public AppUser updateEmployee(Long id, AppUser updatedData) {
         AppUser existing = repository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
         
+        if (updatedData.getEmail() != null) existing.setEmail(updatedData.getEmail());
         if (updatedData.getSalary() != null) existing.setSalary(updatedData.getSalary());
         if (updatedData.getLevelNo() != null) existing.setLevelNo(updatedData.getLevelNo());
         if (updatedData.getDepartment() != null) existing.setDepartment(updatedData.getDepartment());
