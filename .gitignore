@@ -57,6 +57,7 @@ frontend/dist-ssr/
 **/test-results/
 **/playwright-report/
 **/blob-report/
+**/reports/
 **/.cache/
 
 ### Operating System ###

@@ -8,6 +8,9 @@ on:
 jobs:
   deploy:
     runs-on: self-hosted
+    environment:
+      name: production
+      url: https://quickness-bony-striking.ngrok-free.dev
 
     steps:
       - name: Pull latest code
