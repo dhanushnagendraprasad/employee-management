@@ -37,3 +37,21 @@ jobs:
           sudo systemctl restart employee-management-dev
           sleep 5
           sudo systemctl status employee-management-dev --no-pager
+
+      - name: Execute Playwright E2E Regression Validation Suite
+        run: |
+          cd $HOME/employee-management-dev/e2e
+          npm ci || npm install
+          npx playwright install chromium
+          npx playwright test
+        env:
+          BASE_URL: http://localhost:8080
+          CI: true
+
+      - name: Upload GxP Validation Audit Artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-validation-reports
+          path: /home/nagendd1/employee-management-dev/e2e/reports/
+          retention-days: 14
