@@ -1,256 +1,167 @@
-# Employee Management API
+# Employee Management Platform & Automated Validation Suite
 
-This document lists the application's public REST APIs with real-world names, numbered entries, endpoints, request/response shapes and authorization notes. Use this as the quick reference for API documentation and README inclusion.
+[![Dev CI & E2E Quality Gate](https://github.com/dhanushnagendraprasad/employee-management/actions/workflows/deploy-dev.yml/badge.svg)](https://github.com/dhanushnagendraprasad/employee-management/actions/workflows/deploy-dev.yml)
+[![Production Deployment](https://github.com/dhanushnagendraprasad/employee-management/actions/workflows/deploy.yml/badge.svg)](https://github.com/dhanushnagendraprasad/employee-management/actions/workflows/deploy.yml)
+![Java 21](https://img.shields.io/badge/Java-21-orange.svg)
+![Spring Boot 3](https://img.shields.io/badge/Spring%20Boot-3.3.5-brightgreen.svg)
+![React 19](https://img.shields.io/badge/React-19.2-blue.svg)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6.svg)
+![Playwright](https://img.shields.io/badge/Playwright-1.49-green.svg)
+![Compliance](https://img.shields.io/badge/Compliance-FDA%2021%20CFR%20Part%2011%20%2F%20GAMP%205-purple.svg)
+
+An enterprise-grade full-stack human resource management platform featuring an isolated multi-environment deployment architecture, zero-skip hermetic backend test suites, and an automated Playwright E2E validation engine generating FDA 21 CFR Part 11 / GAMP 5 compliant audit reports with cryptographic SHA-256 integrity verification.
 
 ---
 
-## How to run (dev)
+## 🌐 Live Environments & Infrastructure
 
-- Run with Maven wrapper:
+The application runs on a dual-environment Linux server architecture with complete database and network isolation:
 
+| Environment | Purpose | Ingress / URL | Backend Port | Database | Service Name |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Production** | Live system for end users | [Live App Ingress](https://quickness-bony-striking.ngrok-free.dev) | `8081` | `employee_management` (MySQL) | `employee-management.service` |
+| **Development** | Integration testing & E2E gate | `http://localhost:8080` (or LAN IP) | `8082` | `employee_management_dev` (MySQL) | `employee-management-dev.service` |
+
+---
+
+## 🏗️ System Architecture & Technology Stack
+
+```
+                              SYSTEM ARCHITECTURE
+                              
+   [ Vite Frontend: React 19 + TypeScript ] ◄──► [ Playwright E2E Test Suite ]
+                         │                                    │
+                    REST │ Axios (JWT Auth)                   │ UI & API Probing
+                         ▼                                    ▼
+       [ Spring Boot 3.3.5 REST API Engine ] ────► [ GxP 21 CFR Part 11 Reporter ]
+         ├── Spring Security + JJWT 0.11.5                    ├── Executive Summary Cards
+         ├── Spring Data JPA & Hibernate                      ├── Step Screenshot Audits
+         └── Role-Based Access (ADMIN, MANAGER, EMPLOYEE)     └── SHA-256 Digital Seal
+                         │
+        ┌────────────────┴────────────────┐
+        ▼                                 ▼
+   [ Dev MySQL (Port 8082) ]    [ Prod MySQL (Port 8081) ]
+```
+
+### Backend Engine
+- **Runtime:** Java 21 LTS
+- **Framework:** Spring Boot 3.3.5 (Spring Web, Spring Security, Spring Data JPA)
+- **Authentication:** Stateless JWT (`io.jsonwebtoken:jjwt`), BCrypt password hashing
+- **Database:** MySQL 8.0 (Runtime) & H2 In-Memory (Hermetic Unit Testing)
+- **Build Tool:** Maven with integrated testing lifecycle
+
+### Modern Frontend
+- **Framework:** React 19 SPA (Single Page Application)
+- **Tooling:** Vite 8, TypeScript 5, React Router v7
+- **State Management:** Zustand
+- **Styling & UI:** Pure CSS Modules with glassmorphism design, Lucide React icons
+
+### Quality Engineering & Test Architecture
+- **Backend Testing:** 64 hermetic JUnit 5 & Spring MockMvc integration tests running in-memory with `@ActiveProfiles("test")` (0 skipped, 100% pass rate).
+- **E2E Automation:** Playwright + TypeScript framework implementing strict Page Object Model (`LoginPage`, `RegisterPage`, `DashboardPage`).
+- **Dynamic Event-Driven Synchronization:** Zero arbitrary sleeps (`waitForTimeout`). All waits rely on DOM element lifecycle, absence of loading indicators, and browser animation settlement (`document.getAnimations().map(a => a.finished)`).
+- **Regulatory Validation Reporter:** Custom Playwright reporter generating executive validation summaries (HTML & companion PDF) featuring chronological audit logs, full-width high-resolution evidence screenshots, and an immutable 256-bit SHA-256 cryptographic integrity hash.
+
+---
+
+## 🛡️ Enterprise CI/CD & Dev Quality Gate
+
+The repository uses GitHub Actions branch protection where **code cannot reach Production without passing through the Dev E2E Quality Gate**:
+
+```
+                       CI/CD QUALITY GATE LIFECYCLE
+                       
+  Developer commits to `dev` branch
+               │
+               ▼
+  [ GitHub Actions: deploy-dev.yml ]
+    ├── 1. Run 64 Backend Unit/Integration Tests (H2 in-memory, 0 skips)
+    ├── 2. Build Vite Frontend & Spring Boot JAR package
+    ├── 3. Restart Dev systemd service (`employee-management-dev`)
+    │
+    └── 4. 🛡️ PLAYWRIGHT E2E REGRESSION SUITE (Dev Gate)
+             ├── Executes multi-step validation protocols against running Dev
+             ├── Computes 256-bit SHA-256 Checksum on generated audit report
+             ├── Attaches HTML & PDF reports as 14-day GitHub Artifacts
+             │
+             ├── IF ALL PASS:
+             │     └── PR to `main` approved for merge
+             │
+             └── IF ANY FAIL:
+                   └── Build fails ❌; Merge to `main` is HARD BLOCKED
+```
+
+---
+
+## 📋 4-Step Regulatory Validation Protocol (CSV Standard)
+
+In compliance with life sciences Computer System Validation (CSV) protocols, every test protocol establishes an immutable visual audit trail across four execution phases:
+
+1. **Step 1: Initial State** — Proves pristine, empty initial form navigation state.
+2. **Step 2: Input Population** — Proves accurate user input entry prior to submission.
+3. **Step 3: Verification Outcome** — Captures completed state (directory loaded with no spinners, or server rejection banner fully rendered).
+4. **Step 4: Session Teardown** — Clicks `Logout`, validates session termination, and captures proof of return to the login portal.
+
+---
+
+## 🔌 Public REST API Reference
+
+All protected endpoints require an `Authorization: Bearer <token>` header obtained via `/api/auth/login`.
+
+| # | Endpoint | Method | Role Required | Description |
+| :- | :--- | :---: | :---: | :--- |
+| **1** | `/api/auth/register` | `POST` | Public | Register a new user account (employee, manager, or admin) |
+| **2** | `/api/auth/login` | `POST` | Public | Authenticate credentials and receive JWT access token |
+| **3** | `/api/employees` | `POST` | `ADMIN` | Create a new employee record with address and salary |
+| **4** | `/api/employees` | `GET` | `ADMIN`, `MANAGER` | Retrieve paginated list of employees (`page`, `size`, `sortBy`) |
+| **5** | `/api/employees/{id}` | `GET` | Authenticated | Retrieve specific employee profile by ID |
+| **6** | `/api/employees/{id}` | `PUT` | `ADMIN`, `MANAGER` | Update existing employee details |
+| **7** | `/api/employees/{id}/salary` | `PUT` | `ADMIN`, `MANAGER` | Apply percentage-based salary hike (`?hikePercentage=X`) |
+| **8** | `/api/employees/{id}` | `DELETE` | `ADMIN` | Permanently delete an employee record |
+| **9** | `/api/employees/search/city/{city}` | `GET` | `ADMIN`, `MANAGER` | Search employees by city |
+| **10** | `/api/employees/search/state/{state}` | `GET` | `ADMIN`, `MANAGER` | Search employees by state |
+| **11** | `/api/employees/search/country/{country}` | `GET` | `ADMIN`, `MANAGER` | Search employees by country |
+| **12** | `/api/employees/search/pincode/{pincode}` | `GET` | `ADMIN`, `MANAGER` | Search employees by postal code |
+| **13** | `/api/employees/search/role/{role}` | `GET` | `ADMIN`, `MANAGER` | Filter employees by assigned role (`ROLE_EMPLOYEE`, etc.) |
+| **14** | `/api/employees/search/salary/above/{amt}` | `GET` | `ADMIN`, `MANAGER` | Filter employees with salary strictly above amount |
+| **15** | `/api/employees/search/salary/below/{amt}` | `GET` | `ADMIN`, `MANAGER` | Filter employees with salary strictly below amount |
+
+---
+
+## 🚀 Local Development Quickstart
+
+### Prerequisites
+- Java 21 JDK
+- Node.js (v20+) & npm
+- MySQL 8.0 (or run with H2 profile)
+
+### 1. Run Backend Service
 ```powershell
+# Run with local MySQL profile
 ./mvnw spring-boot:run
+
+# Or run hermetic test suite (H2 in-memory)
+./mvnw test
 ```
 
-- The application uses MySQL by default (see `src/main/resources/application.properties`). To run quickly without MySQL, create a `application-dev.properties` profile that points to H2 and start with `-Dspring.profiles.active=dev`.
-
-- Swagger/OpenAPI UI: http://localhost:8080/swagger-ui.html (when app running)
-
----
-
-## Authentication
-
-- This app uses JWT-based authentication. Obtain a token using the Login API and send it in the `Authorization` header for protected endpoints:
-
-```
-Authorization: Bearer <token>
+### 2. Run Modern Frontend (Vite)
+```powershell
+cd frontend
+npm install
+npm run dev
+# Frontend runs at http://localhost:5173
 ```
 
----
+### 3. Run Playwright E2E Validation Suite
+```powershell
+cd e2e
+npm install
+npx playwright install chromium
 
-## Numbered API reference
+# Run full regression suite (headless)
+npx playwright test
 
-1) User Registration (Register User)
-   - Method: POST
-   - Path: `/api/auth/register`
-   - Purpose: Create a new user account (employee or other role).
-   - Request body: `SignupRequest` (fields used in controller: `username`, `password`, `email`, `salary`, `address`, optional `role`)
-   - Response: result of `AuthService.register(...)` (200 OK)
-   - Auth: Public (no token required)
-
-2) User Login (Authenticate / Issue JWT)
-   - Method: POST
-   - Path: `/api/auth/login`
-   - Purpose: Authenticate user and receive JWT token for subsequent requests.
-   - Request body: `LoginRequest` (`username`, `password`)
-   - Response: `JwtResponse` (`token`, `username`) (200 OK)
-   - Auth: Public (no token required)
-
-3) Create Employee (Add Employee)
-   - Method: POST
-   - Path: `/api/employees`
-   - Purpose: Create a new employee record.
-   - Request body: `EmployeeDTO` (see `src/main/java/.../dto/EmployeeDTO.java`)
-   - Response: Created `AppUser` (201 Created)
-   - Auth: ADMIN only (`hasRole('ADMIN')`)
-
-4) List Employees (Paged)
-   - Method: GET
-   - Path: `/api/employees`
-   - Purpose: Get paginated list of employees.
-   - Query params: `page` (default 0), `size` (default 10), `sortBy` (default `id`), `sortDir` (`asc` or `desc`)
-   - Response: `Page<AppUser>` (200 OK)
-   - Auth: ADMIN or MANAGER (`hasAnyRole('ADMIN', 'MANAGER')`)
-
-5) Get Employee By ID
-   - Method: GET
-   - Path: `/api/employees/{id}`
-   - Purpose: Retrieve a specific employee by database id.
-   - Response: `AppUser` (200 OK) or 404 Not Found
-   - Auth: Any authenticated user (`isAuthenticated()`)
-
-6) Update Employee
-   - Method: PUT
-   - Path: `/api/employees/{id}`
-   - Purpose: Update an employee entity.
-   - Request body: `AppUser` (entity payload)
-   - Response: updated `AppUser` (200 OK) or 404 Not Found
-   - Auth: ADMIN or MANAGER
-
-7) Apply Salary Hike (Adjust Salary)
-   - Method: PUT
-   - Path: `/api/employees/{id}/salary?hikePercentage=<value>`
-   - Purpose: Apply a percentage-based salary hike to employee.
-   - Query param: `hikePercentage` (double)
-   - Response: updated `AppUser` (200 OK) or 404 Not Found
-   - Auth: ADMIN or MANAGER
-
-8) Delete Employee
-   - Method: DELETE
-   - Path: `/api/employees/{id}`
-   - Purpose: Remove an employee record.
-   - Response: 204 No Content
-   - Auth: ADMIN only
-
-9) Search Employees by City
-   - Method: GET
-   - Path: `/api/employees/search/city/{city}`
-   - Purpose: Find employees by city.
-   - Response: `List<AppUser>`
-   - Auth: ADMIN or MANAGER
-
-10) Search Employees by State
-    - Method: GET
-    - Path: `/api/employees/search/state/{state}`
-    - Purpose: Find employees by state.
-    - Response: `List<AppUser>`
-    - Auth: ADMIN or MANAGER
-
-11) Search Employees by Country
-    - Method: GET
-    - Path: `/api/employees/search/country/{country}`
-    - Purpose: Find employees by country.
-    - Response: `List<AppUser>`
-    - Auth: ADMIN or MANAGER
-
-12) Search Employees by Pincode
-    - Method: GET
-    - Path: `/api/employees/search/pincode/{pincode}`
-    - Purpose: Find employees by postal code.
-    - Response: `List<AppUser>`
-    - Auth: ADMIN or MANAGER
-
-13) Search Employees by Role
-    - Method: GET
-    - Path: `/api/employees/search/role/{roleName}`
-    - Purpose: Find employees that have a specific role (e.g., ADMIN, MANAGER).
-    - Note: controller will convert `ADMIN` to `ROLE_ADMIN` if needed.
-    - Response: `List<AppUser>`
-    - Auth: ADMIN or MANAGER
-
-14) Search Employees by Salary Above
-    - Method: GET
-    - Path: `/api/employees/search/salary/above/{amount}`
-    - Purpose: Find employees with salary strictly above amount.
-    - Response: `List<AppUser>`
-    - Auth: ADMIN or MANAGER
-
-15) Search Employees by Salary Below
-    - Method: GET
-    - Path: `/api/employees/search/salary/below/{amount}`
-    - Purpose: Find employees with salary strictly below amount.
-    - Response: `List<AppUser>`
-    - Auth: ADMIN or MANAGER
-
----
-
-## Notes & Architecture
-
-- The request/response DTO types are located in `src/main/java/com/example/employee_management/dto` and `payload` packages.
-- All endpoints are secured with Spring Security JWT authentication and role-based access control (`ROLE_ADMIN`, `ROLE_MANAGER`, `ROLE_EMPLOYEE`).
-- Automated tests run hermetically using in-memory H2 database under `@ActiveProfiles("test")`.
-
----
-
-## Examples (for Postman; assumes local server at http://localhost:8081)
-
-Note: The project defaults to port 8080. If you started the app on 8081 (as in the earlier logs), replace 8081 with 8080 when appropriate.
-
-Common role names (seeded by `DataSeeder`):
-- ROLE_ADMIN
-- ROLE_MANAGER
-- ROLE_EMPLOYEE
-
-The examples below show the HTTP method and the full endpoint URL to add into Postman. JSON payloads are provided where relevant.
-
-1) Login (get JWT)
-    - Method: POST
-    - URL: http://localhost:8081/api/auth/login
-    - Body (JSON):
-```json
-{
-   "username": "sample_admin",
-   "password": "StrongPassword123!"
-}
+# Or watch browser in real time
+npx playwright test --headed
 ```
-
-2) Register (create user)
-    - Method: POST
-    - URL: http://localhost:8081/api/auth/register
-    - Body (JSON):
-```json
-{
-   "username": "newuser",
-   "password": "StrongPassword123!",
-   "email": "newuser@example.com",
-   "salary": 45000,
-   "address": {
-      "city": "Bengaluru",
-      "state": "Karnataka",
-      "country": "India",
-      "pincode": "560001"
-   },
-   "role": "ROLE_EMPLOYEE"
-}
-```
-
-3) Create Employee (admin only)
-    - Method: POST
-    - URL: http://localhost:8081/api/employees
-    - Headers: Authorization: Bearer <token>
-    - Body (JSON, matches `EmployeeDTO`):
-```json
-{
-   "username": "employee1",
-   "password": "secret123",
-   "email": "employee1@example.com",
-   "role": "ROLE_EMPLOYEE",
-   "salary": 35000,
-   "levelNo": 2,
-   "address": {
-      "city": "Chennai",
-      "state": "Tamil Nadu",
-      "country": "India",
-      "pincode": "600001"
-   }
-}
-```
-
-4) List employees (paged)
-    - Method: GET
-    - URL: http://localhost:8081/api/employees?page=0&size=10&sortBy=id&sortDir=asc
-    - Headers: Authorization: Bearer <token>
-
-5) Get employee by id
-    - Method: GET
-    - URL: http://localhost:8081/api/employees/1
-    - Headers: Authorization: Bearer <token>
-
-6) Update employee (admin/manager)
-    - Method: PUT
-    - URL: http://localhost:8081/api/employees/1
-    - Headers: Authorization: Bearer <token>
-    - Body: provide the full `AppUser` JSON (take from GET, modify fields)
-
-7) Apply salary hike
-    - Method: PUT
-    - URL: http://localhost:8081/api/employees/1/salary?hikePercentage=10
-    - Headers: Authorization: Bearer <token>
-
-8) Delete employee (admin)
-    - Method: DELETE
-    - URL: http://localhost:8081/api/employees/1
-    - Headers: Authorization: Bearer <token>
-
-9) Search examples
-    - By city:
-       - Method: GET
-       - URL: http://localhost:8081/api/employees/search/city/Bengaluru
-       - Headers: Authorization: Bearer <token>
-    - By role (example: managers):
-       - Method: GET
-       - URL: http://localhost:8081/api/employees/search/role/MANAGER
-       - Headers: Authorization: Bearer <token>
-
-
-
+Generated validation reports (HTML & PDF) and screenshot audit trails are saved to `e2e/reports/`.

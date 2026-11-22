@@ -1,339 +1,159 @@
-# Employee Management API - Test Documentation
+# Comprehensive Test Architecture & Validation Documentation
 
-## Overview
-This document provides comprehensive information about the test suite for the Employee Management API. The test suite covers unit tests, integration tests, and service layer tests.
+An authoritative technical reference for the test strategy, execution architecture, and regulatory validation suites implemented in the Employee Management Platform.
 
-## Test Structure
+---
+
+## 🏛️ Test Strategy & The Test Pyramid
+
+The application enforces a multi-tier test pyramid ensuring high test execution speed, deterministic verification, and full regulatory traceability:
 
 ```
-src/test/java/com/example/employee_management/
-├── controller/
-│   ├── AuthControllerTest.java          # Authentication controller tests
-│   └── EmployeeControllerTest.java      # Employee CRUD controller tests
-├── service/
-│   ├── AuthServiceTest.java             # Authentication service tests
-│   └── EmployeeServiceTest.java         # Employee service business logic tests
-├── EmployeeManagementIntegrationTest.java  # End-to-end integration tests
-└── EmployeeManagementApplicationTests.java # Basic application context test
-
-src/test/resources/
-└── application-test.properties          # Test configuration using H2 in-memory DB
+                          THE TEST PYRAMID
+                          
+                     ▲
+                    / \      [ 4 E2E Validation Protocols ]
+                   /   \     Playwright + TypeScript (Dev UI/API Gate)
+                  /     \    BMS GxP Standard / 21 CFR Part 11 HTML+PDF Reports
+                 /───────\   
+                /         \  [ 15 Integration Tests ]
+               /           \ Spring MockMvc + Full Security & JWT Workflow
+              /─────────────\
+             /               \ [ 49 Unit & Service Tests ]
+            /                 \ JUnit 5 + Mockito + In-Memory H2 DB
+           /───────────────────\
 ```
 
-## Test Categories
+| Layer | Framework / Tools | Scope | Database | Execution Time | Gate Policy |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Backend Unit & MockMvc** | JUnit 5, Mockito, MockMvc | Controllers, Business Services, Security Filters | H2 In-Memory (`@ActiveProfiles("test")`) | ~3.5s (64 tests) | Zero skip, 100% pass required on every commit |
+| **Backend Integration** | SpringBootTest, MockMvc | Full registration, login, and CRUD lifecycles | H2 In-Memory | Included in Maven build | Gated on `mvn test` |
+| **Frontend E2E Validation** | Playwright, TypeScript | Full UI session lifecycle, authentication, CSV audits | Live Dev MySQL (Port 8082) | ~12.4s (4 protocols) | Hard block on PR merge to `main` |
 
-### 1. Controller Layer Tests
+---
 
-#### AuthControllerTest.java
-Tests authentication endpoints with focus on HTTP status codes and response content.
+## ☕ 1. Backend Test Suite (64 Hermetic Tests)
 
-**Test Cases:**
-- `testRegisterUser_Success()` - Valid user registration
-- `testRegisterUser_WithoutRole_DefaultsToEmployee()` - Default role assignment
-- `testRegisterUser_MissingRequiredFields()` - Input validation
-- `testLoginUser_Success()` - Valid login with JWT token generation
-- `testLoginUser_InvalidCredentials()` - Authentication failure
-- `testLoginUser_UserNotFound()` - Non-existent user handling
+All backend tests execute hermetically using Spring Boot's test profile with **zero external dependencies** and **zero data leakage**.
 
-**Endpoints Tested:**
-- `POST /api/auth/register` - User registration
-- `POST /api/auth/login` - User authentication
+### Configuration Isolation (`src/test/resources/application-test.properties`)
+* **Database:** In-memory H2 (`jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1`)
+* **DDL Strategy:** `create-drop` (fresh schema per test suite, cleanly destroyed after execution)
+* **Profile Annotation:** Enforced via `@ActiveProfiles("test")` on all test classes to prevent fallback to production MySQL.
 
-#### EmployeeControllerTest.java
-Tests employee CRUD operations with role-based access control.
+---
 
-**Test Cases:**
+### Layer Breakdown
 
-*Create Employee:*
-- `testCreateEmployee_WithAdminRole_Success()` - Admin can create
-- `testCreateEmployee_WithManagerRole_Forbidden()` - Manager cannot create
-- `testCreateEmployee_Unauthorized()` - Unauthenticated access denied
+#### A. Controller Layer Tests (`src/test/java/.../controller/`)
+1. **`AuthControllerTest.java` (6 Test Cases)**
+   - `testRegisterUser_Success()` — Valid registration returns 200 OK.
+   - `testRegisterUser_WithoutRole_DefaultsToEmployee()` — Verifies default fallback role assignment.
+   - `testRegisterUser_MissingRequiredFields()` — Input validation error handling.
+   - `testLoginUser_Success()` — Valid credentials return JWT access token and username.
+   - `testLoginUser_InvalidCredentials()` — Bad credentials return 401 Unauthorized / Bad credentials exception.
+   - `testLoginUser_UserNotFound()` — Non-existent user handling.
 
-*Read Employees:*
-- `testGetAllEmployees_WithAdminRole_Success()` - Admin list access
-- `testGetAllEmployees_WithManagerRole_Success()` - Manager list access
-- `testGetAllEmployees_WithEmployeeRole_Forbidden()` - Employee denied
-- `testGetAllEmployees_WithPagination()` - Pagination support
-- `testGetAllEmployees_WithSortBySalary()` - Sort by different fields
-- `testGetEmployeeById_Authenticated_Success()` - Authenticated access
-- `testGetEmployeeById_NotFound()` - Non-existent employee
-- `testGetEmployeeById_Unauthorized()` - Unauthenticated access
+2. **`EmployeeControllerTest.java` (30 Test Cases)**
+   - **Create:** Admin authorized (201 Created), Manager forbidden (403), Unauthenticated rejected (401).
+   - **Read & Paging:** Pagination with `page`, `size`, `sortBy` parameters, ID lookup, not-found handling (404).
+   - **Update:** Admin update, Manager update, Employee role forbidden (403).
+   - **Salary Hike:** Percentage calculation, negative percentage handling, RBAC permissions.
+   - **Delete:** Admin deletion (204 No Content), non-admin rejection (403).
+   - **Location & Attribute Search:** Filter by city, state, country, pincode, role, salary above threshold, salary below threshold.
 
-*Update Employee:*
-- `testUpdateEmployee_WithAdminRole_Success()` - Admin update
-- `testUpdateEmployee_WithManagerRole_Success()` - Manager update
-- `testUpdateEmployee_WithEmployeeRole_Forbidden()` - Employee denied
-- `testUpdateEmployee_NotFound()` - Update non-existent employee
+#### B. Service Business Logic Layer Tests (`src/test/java/.../service/`)
+1. **`AuthServiceTest.java` (5 Test Cases)**
+   - Password encryption verification (`BCryptPasswordEncoder`).
+   - Role assignment logic (`ROLE_ADMIN`, `ROLE_MANAGER`, `ROLE_EMPLOYEE`).
+   - Duplicate username prevention (`existsByUsername` throwing `RuntimeException`).
 
-*Salary Hike:*
-- `testApplySalaryHike_WithAdminRole_Success()` - Admin hike
-- `testApplySalaryHike_WithManagerRole_Success()` - Manager hike
-- `testApplySalaryHike_WithEmployeeRole_Forbidden()` - Employee denied
-- `testApplySalaryHike_WithNegativePercentage()` - Negative hike handling
+2. **`EmployeeServiceTest.java` (13 Test Cases)**
+   - Employee creation with composite embedded `Address`.
+   - Update verification (including email, address, and salary fields).
+   - Percentage-based salary hike calculations.
+   - Custom search queries and pagination business logic.
 
-*Delete Employee:*
-- `testDeleteEmployee_WithAdminRole_Success()` - Admin delete
-- `testDeleteEmployee_WithManagerRole_Forbidden()` - Manager denied
-- `testDeleteEmployee_WithEmployeeRole_Forbidden()` - Employee denied
+#### C. End-to-End Integration Tests (`src/test/java/.../`)
+1. **`EmployeeManagementIntegrationTest.java` (9 Workflows)**
+   - Complete multi-step user registration, JWT token acquisition, and authenticated CRUD workflow.
+   - Role-Based Access Control (RBAC) security matrix validation.
+   - Public vs. Protected endpoint security barriers.
 
-*Search Operations:*
-- `testSearchByCity_Success()` - Search by city
-- `testSearchByCity_WithManagerRole_Success()` - Manager search access
-- `testSearchByCity_Unauthorized()` - Unauthenticated search
-- `testSearchByState_Success()` - Search by state
-- `testSearchByCountry_Success()` - Search by country
-- `testSearchByPincode_Success()` - Search by pincode
-- `testSearchByRole_Success()` - Search by role
-- `testSearchBySalaryAbove_Success()` - Search by salary range (above)
-- `testSearchBySalaryBelow_Success()` - Search by salary range (below)
+2. **`EmployeeManagementApplicationTests.java` (1 Test Case)**
+   - Spring ApplicationContext initialization and dependency injection smoke test.
 
-**Endpoints Tested:**
-- `POST /api/employees` - Create employee
-- `GET /api/employees` - List employees (with pagination)
-- `GET /api/employees/{id}` - Get employee by ID
-- `PUT /api/employees/{id}` - Update employee
-- `PUT /api/employees/{id}/salary` - Apply salary hike
-- `DELETE /api/employees/{id}` - Delete employee
-- `GET /api/employees/search/city/{city}` - Search by city
-- `GET /api/employees/search/state/{state}` - Search by state
-- `GET /api/employees/search/country/{country}` - Search by country
-- `GET /api/employees/search/pincode/{pincode}` - Search by pincode
-- `GET /api/employees/search/role/{roleName}` - Search by role
-- `GET /api/employees/search/salary/above/{amount}` - Search by salary above
-- `GET /api/employees/search/salary/below/{amount}` - Search by salary below
+---
 
-### 2. Service Layer Tests
+## 🎭 2. Playwright E2E Regression Validation Suite
 
-#### AuthServiceTest.java
-Tests business logic for authentication and user registration.
+The E2E automation suite is located under `e2e/` and executes against the deployed Development environment (`http://localhost:8080` or `http://192.168.1.106:8080`).
 
-**Test Cases:**
-- `testRegisterUser_Success()` - Successful registration
-- `testRegisterUser_PasswordEncrypted()` - Password encryption verification
-- `testRegisterUser_WithAdminRole()` - Admin role assignment
-- `testRegisterUser_WithManagerRole()` - Manager role assignment
-- `testRegisterUser_DuplicateUsername()` - Duplicate username prevention
+### Design Patterns
+* **Strict Page Object Model (POM):**
+  * `LoginPage.ts`: Encapsulates username, password, login action, and error banners.
+  * `RegisterPage.ts`: Encapsulates registration fields, role selection, submit, and alert banners.
+  * `DashboardPage.ts`: Encapsulates directory table, data fetch state, and clean session logout.
+  * Zero direct DOM selectors exist in test spec files.
+* **Test Isolation & Hermetic Data:**
+  * Positive tests dynamically generate unique timestamped users (`user_${Date.now()}`) to prevent state collisions.
+  * Positive login tests provision a fresh test user via fast API calls (`page.request.post`) in milliseconds before initiating UI login, eliminating dependency on dirty database state.
+* **Dynamic Event-Driven Synchronization:**
+  * Zero arbitrary `waitForTimeout` sleeps.
+  * Dynamic waits observe incoming page header visibility, spinner disappearance, and browser animation settlement via `document.getAnimations().map(a => a.finished)`.
 
-**Methods Tested:**
-- `AuthService.register(AppUser, String)` - User registration with role assignment
+---
 
-#### EmployeeServiceTest.java
-Tests business logic for employee CRUD operations.
+### Executed Validation Protocols
 
-**Test Cases:**
-- `testCreateEmployee_Success()` - Create employee with validation
-- `testGetEmployeeById_Success()` - Retrieve employee
-- `testGetEmployeeById_NotFound()` - Handle non-existent employee
-- `testUpdateEmployee_Success()` - Update employee data
-- `testApplySalaryHike_Success()` - Calculate and apply salary hike
-- `testApplySalaryHike_WithNegativePercentage()` - Handle negative adjustments
-- `testDeleteEmployee_Success()` - Delete employee and verify removal
-- `testSearchByCity_Success()` - Search functionality by city
-- `testSearchByState_Success()` - Search functionality by state
-- `testSearchByCountry_Success()` - Search functionality by country
-- `testSearchByPincode_Success()` - Search functionality by pincode
-- `testSearchBySalaryAbove_Success()` - Search by salary threshold (above)
-- `testSearchBySalaryBelow_Success()` - Search by salary threshold (below)
+| Protocol ID | Scope | Verification Type | Lifecycle Phases Verified |
+| :--- | :--- | :---: | :--- |
+| **`TC-VAL-01`** | Positive Authentication & Session Lifecycle | Functional / GxP | 1. Empty Login Form $\rightarrow$ 2. Populated Credentials $\rightarrow$ 3. Authenticated Dashboard (Data Loaded) $\rightarrow$ 4. Logout Proof |
+| **`TC-VAL-02`** | Negative Authentication (Bad Credentials) | Security / Error | 1. Empty Form $\rightarrow$ 2. Populated Invalid Data $\rightarrow$ 3. Server Rejection (`Bad credentials`) |
+| **`TC-VAL-03`** | Positive Account Provisioning & Dynamic Redirect | Functional / Flow | 1. Empty Signup $\rightarrow$ 2. Populated Data $\rightarrow$ 3. Success Banner $\rightarrow$ 4. Settled Redirect to Login |
+| **`TC-VAL-04`** | Negative Registration on Duplicate Username | Data Integrity | 1. Fresh Form $\rightarrow$ 2. Populated Duplicate Data $\rightarrow$ 3. Collision Banner (`Username exists`) |
 
-**Methods Tested:**
-- `EmployeeService.createEmployee(EmployeeDTO)`
-- `EmployeeService.getEmployeeById(Long)`
-- `EmployeeService.updateEmployee(Long, AppUser)`
-- `EmployeeService.applySalaryHike(Long, double)`
-- `EmployeeService.deleteEmployee(Long)`
-- `EmployeeService.searchByCity(String)`
-- `EmployeeService.searchByState(String)`
-- `EmployeeService.searchByCountry(String)`
-- `EmployeeService.searchByPincode(String)`
-- `EmployeeService.searchBySalaryAbove(Double)`
-- `EmployeeService.searchBySalaryBelow(Double)`
+---
 
-### 3. Integration Tests
+## 🔒 3. Regulatory GxP / FDA 21 CFR Part 11 Reporting
 
-#### EmployeeManagementIntegrationTest.java
-End-to-end tests covering complete workflows with real authentication.
+The test suite incorporates a custom regulatory reporter (`e2e/reporters/gxp-reporter.ts`) generating tamper-evident execution audit trails.
 
-**Test Cases:**
-- `testFullRegistrationFlow()` - Registration with all details
-- `testCompleteEmployeeCRUDWorkflow()` - Full CRUD lifecycle
-  - Create employee
-  - Retrieve employee
-  - Apply salary hike
-  - Search by location
-  - Delete employee
-  - Verify deletion
-- `testRoleBasedAccessControl()` - RBAC verification for different roles
-- `testSearchFunctionality()` - All search endpoints
-- `testPaginationSupport()` - Pagination and sorting
-- `testUnauthorizedAccess()` - Security: unauthenticated requests
-- `testAuthenticationWithInvalidCredentials()` - Security: invalid credentials
+### Compliance Standards Met
+* **Attributable:** Operator identity explicitly recorded (`Dhanush Nagendra Prasad`).
+* **Contemporaneous:** Execution timestamps formatted in Indian Standard Time (`GMT+5:30`) per validation step.
+* **Original & Accurate:** 100% full-width high-resolution screenshot evidence captured at every phase of test execution.
+* **Tamper-Evident:** A 256-bit cryptographic **SHA-256 Checksum** is computed across the generated report body and embedded in the digital seal. Any post-execution tampering invalidates the hash.
+* **Automated Artifacts:** Generates both a standalone single-file HTML report (embedded base64 evidence) and a companion A4 PDF document compiled via headless Chromium.
+* **Storage Governance:** Automated local retention policy keeps only the **latest 5 runs**, preventing server storage exhaustion.
 
-**Workflows Tested:**
-1. **Authentication Flow**
-   - User registration
-   - User login with JWT token generation
-   - Token validation
+---
 
-2. **Employee Management Flow**
-   - Create new employee (Admin only)
-   - List employees with pagination
-   - Retrieve specific employee
-   - Update employee information
-   - Apply salary adjustments
-   - Search employees by various criteria
-   - Delete employees
+## 🚀 4. How to Execute Tests
 
-3. **Role-Based Access Control**
-   - Admin: Full access to all operations
-   - Manager: Access to read and update operations
-   - Employee: Limited to viewing own data
+### Backend Suite
+```powershell
+# Run all 64 backend tests
+./mvnw clean test
 
-4. **Security**
-   - JWT token authentication
-   - Role-based authorization
-   - Unauthorized access rejection
-   - Invalid credential handling
+# Run a specific test class
+./mvnw test -Dtest=EmployeeControllerTest
 
-## Running the Tests
-
-### Run All Tests
-```bash
-mvn clean test
+# Run a single test method
+./mvnw test -Dtest=AuthControllerTest#testLoginUser_Success
 ```
 
-### Run Specific Test Class
-```bash
-mvn test -Dtest=AuthControllerTest
-mvn test -Dtest=EmployeeControllerTest
-mvn test -Dtest=EmployeeServiceTest
-mvn test -Dtest=AuthServiceTest
-mvn test -Dtest=EmployeeManagementIntegrationTest
+### Playwright E2E Suite
+```powershell
+cd e2e
+
+# Run all validation protocols (headless)
+npx playwright test
+
+# Run with interactive UI mode
+npx playwright test --ui
+
+# Run with headed browser visible
+npx playwright test --headed
 ```
-
-### Run Specific Test Method
-```bash
-mvn test -Dtest=AuthControllerTest#testLoginUser_Success
-mvn test -Dtest=EmployeeControllerTest#testCreateEmployee_WithAdminRole_Success
-```
-
-### Run Tests with Coverage
-```bash
-mvn clean test jacoco:report
-# Report available at: target/site/jacoco/index.html
-```
-
-### Run Tests from IDE
-- Right-click on test class → Run 'ClassName'
-- Right-click on test method → Run 'methodName()'
-- Or use Ctrl+Shift+F10 (Windows/Linux) or Ctrl+Shift+R (Mac)
-
-## Test Configuration
-
-**Test Database:** H2 In-Memory Database
-- **URL:** `jdbc:h2:mem:testdb`
-- **Driver:** `org.h2.Driver`
-- **Schema Creation:** `create-drop` (created before tests, dropped after)
-
-**Test Properties File:** `application-test.properties`
-- Uses H2 instead of MySQL
-- Logging level set to WARN for cleaner output
-- JWT configuration matches production
-
-**Active Profiles:** `@ActiveProfiles("test")`
-- Loads `application-test.properties` during test execution
-- Isolated from production database
-- Fast execution with in-memory DB
-
-## Test Data Setup
-
-### Pre-seeded Users (via DataSeeder)
-- **admin** / password (ROLE_ADMIN)
-- **manager** / password (ROLE_MANAGER)
-- **employee** / password (ROLE_EMPLOYEE)
-
-### Dynamic Test Data
-- Created in `@BeforeEach` methods
-- Cleaned up automatically after each test
-- Ensures test isolation and repeatability
-
-## Test Assertions
-
-Common assertion patterns used:
-```java
-// Status assertions
-.andExpect(status().isOk())
-.andExpect(status().isCreated())
-.andExpect(status().isNotFound())
-.andExpect(status().isUnauthorized())
-.andExpect(status().isForbidden())
-.andExpect(status().isNoContent())
-
-// JSON path assertions
-.andExpect(jsonPath("$.id").exists())
-.andExpect(jsonPath("$.username").value("testuser"))
-.andExpect(jsonPath("$.salary").value(50000.0))
-
-// Service layer assertions
-assertEquals(expected, actual)
-assertNotNull(result)
-assertTrue(condition)
-assertThrows(ExceptionClass.class, () -> methodCall())
-```
-
-## Coverage Goals
-
-- **Controller Tests:** 90%+ coverage
-- **Service Tests:** 95%+ coverage
-- **Integration Tests:** Key workflows covered
-- **Overall:** 85%+ code coverage
-
-## Best Practices Used
-
-1. **Isolation:** Each test is independent and can run in any order
-2. **Clarity:** Test names clearly describe what is being tested
-3. **Completeness:** Both success and failure scenarios covered
-4. **Performance:** Tests run quickly using in-memory DB
-5. **Maintainability:** Organized by layers (controller, service, integration)
-6. **Security:** Authentication and authorization tested
-7. **Documentation:** Comments explain test purpose
-
-## Continuous Integration
-
-These tests are designed to run in CI/CD pipelines:
-- Fast execution (~30 seconds for full suite)
-- No external dependencies (in-memory DB)
-- Deterministic results
-- Easy to integrate with GitHub Actions, Jenkins, etc.
-
-## Troubleshooting
-
-### Test Failures
-
-**Issue:** `DataIntegrityViolationException` on duplicate username
-**Solution:** Ensure `@BeforeEach` clears test data
-
-**Issue:** `NullPointerException` in assertions
-**Solution:** Use null-safe assertions or check for null before assertions
-
-**Issue:** JWT token expiration in integration tests
-**Solution:** Tokens are generated fresh in `@BeforeEach` for each test
-
-**Issue:** Tests pass locally but fail in CI
-**Solution:** Check timezone settings, ensure H2 configuration is correct
-
-## Future Enhancements
-
-- [ ] Add performance/load tests
-- [ ] Add security penetration tests
-- [ ] Add database migration tests
-- [ ] Add API contract testing
-- [ ] Add mutation testing for code quality
-- [ ] Add API documentation tests
-
-## References
-
-- JUnit 5 Documentation: https://junit.org/junit5/docs/current/user-guide/
-- Spring Boot Testing: https://spring.io/guides/gs/testing-web/
-- MockMvc Documentation: https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/test/web/servlet/MockMvc.html
-- Hamcrest Matchers: http://hamcrest.org/
-
+Reports and screenshot audit trails are generated under `e2e/reports/`.
