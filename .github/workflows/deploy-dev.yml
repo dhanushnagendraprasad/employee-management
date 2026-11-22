@@ -1,0 +1,39 @@
+name: Build and Deploy to Dev Environment
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  deploy-dev:
+    runs-on: self-hosted
+
+    steps:
+      - name: Pull latest dev code
+        run: |
+          cd $HOME/employee-management-dev
+          git fetch origin
+          git reset --hard origin/dev
+
+      - name: Run Automated Test Suite (H2 In-Memory)
+        run: |
+          cd $HOME/employee-management-dev
+          mvn test
+
+      - name: Build Dev Application Package
+        run: |
+          cd $HOME/employee-management-dev
+          mvn package
+
+      - name: Build Dev Frontend with Vite
+        run: |
+          cd $HOME/employee-management-dev/frontend
+          npm ci
+          npm run build
+
+      - name: Restart Dev Spring Boot Service
+        run: |
+          sudo systemctl restart employee-management-dev
+          sleep 5
+          sudo systemctl status employee-management-dev --no-pager
