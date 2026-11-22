@@ -29,7 +29,6 @@ public class CustomUserDetailsService implements UserDetailsService {
                 });
 
         System.out.println(">>> [LOGIN] Found User: " + user.getUsername());
-        System.out.println(">>> [LOGIN] DB Password Hash: " + user.getPassword());
 
         return new org.springframework.security.core.userdetails.User(
                 user.getUsername(),

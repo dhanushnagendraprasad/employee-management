@@ -28,8 +28,6 @@ public class AuthService {
             throw new RuntimeException("Username exists");
         }
 
-        System.out.println(">>> [REGISTER] Raw Password: " + user.getPassword());
-        
         // Encrypt the password before saving
         user.setPassword(encoder.encode(user.getPassword()));
 

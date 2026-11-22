@@ -142,14 +142,6 @@ Authorization: Bearer <token>
     - Response: `List<AppUser>`
     - Auth: ADMIN or MANAGER
 
-16) Test: Verify Password (Debug)
-    - Method: POST
-    - Path: `/api/test/verify`
-    - Purpose: Debug endpoint that checks whether a provided password matches stored hash for a user.
-    - Request body: `LoginRequest` (`username`, `password`)
-    - Response: Plain text debug report (not JSON). Do not expose in production.
-    - Auth: none (controller not annotated for security), use with caution.
-
 ---
 
 ## Notes & next steps
@@ -184,8 +176,8 @@ The examples below show the HTTP method and the full endpoint URL to add into Po
     - Body (JSON):
 ```json
 {
-   "username": "admin",
-   "password": "password"
+   "username": "sample_admin",
+   "password": "StrongPassword123!"
 }
 ```
 
@@ -266,17 +258,6 @@ The examples below show the HTTP method and the full endpoint URL to add into Po
        - Method: GET
        - URL: http://localhost:8081/api/employees/search/role/MANAGER
        - Headers: Authorization: Bearer <token>
-
-10) Debug: verify password (use cautiously)
-      - Method: POST
-      - URL: http://localhost:8081/api/test/verify
-      - Body (JSON):
-```json
-{
-   "username": "admin",
-   "password": "password"
-}
-```
 
 ---
 
