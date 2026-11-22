@@ -24,7 +24,7 @@ jobs:
       - name: Build JAR with Maven
         run: |
           cd $HOME/employee-management
-          mvn clean package -DskipTests
+          mvn package
 
       - name: Build Frontend with Vite
         run: |
