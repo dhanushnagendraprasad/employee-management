@@ -10,20 +10,25 @@ jobs:
     runs-on: self-hosted
 
     steps:
-      - name: Pull latest code on dr006tx
+      - name: Pull latest code
         run: |
-          cd /home/nagendd1/employee-management
+          cd $HOME/employee-management
           git fetch origin
           git reset --hard origin/main
 
+      - name: Run Automated Test Suite
+        run: |
+          cd $HOME/employee-management
+          mvn test
+
       - name: Build JAR with Maven
         run: |
-          cd /home/nagendd1/employee-management
+          cd $HOME/employee-management
           mvn clean package -DskipTests
 
       - name: Build Frontend with Vite
         run: |
-          cd /home/nagendd1/employee-management/frontend
+          cd $HOME/employee-management/frontend
           npm ci
           npm run build
 
