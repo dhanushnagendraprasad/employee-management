@@ -144,18 +144,11 @@ Authorization: Bearer <token>
 
 ---
 
-## Notes & next steps
+## Notes & Architecture
 
-- The above request/response DTO types are located in `src/main/java/com/example/employee_management/dto` and `payload` packages. Use the Java classes for exact field names and validation annotations.
-- Consider adding example curl/PowerShell calls for each API and improving the README with sample request bodies. I can add those if you want.
-- Consider removing or protecting the `/api/test/verify` endpoint before production.
-
----
-
-If you want, I can now:
-- add example requests and sample responses for each API in this README, or
-- generate a small Postman collection from these endpoints, or
-- add a developer `application-dev.properties` for H2 and document running with it.
+- The request/response DTO types are located in `src/main/java/com/example/employee_management/dto` and `payload` packages.
+- All endpoints are secured with Spring Security JWT authentication and role-based access control (`ROLE_ADMIN`, `ROLE_MANAGER`, `ROLE_EMPLOYEE`).
+- Automated tests run hermetically using in-memory H2 database under `@ActiveProfiles("test")`.
 
 ---
 
@@ -188,7 +181,7 @@ The examples below show the HTTP method and the full endpoint URL to add into Po
 ```json
 {
    "username": "newuser",
-   "password": "changeme",
+   "password": "StrongPassword123!",
    "email": "newuser@example.com",
    "salary": 45000,
    "address": {
